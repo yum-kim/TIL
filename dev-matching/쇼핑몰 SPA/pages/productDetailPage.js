@@ -1,6 +1,9 @@
-export default function DetailedProduct({ $target, currentProduct, addCart, addProductOption }) {
+import { routeChange } from "../route.js";
+
+export default function ProductDetailPage({ $target, productId }) {
     this.state = {
-        currentProduct,
+        productId,
+        currentProduct: {},
         selectedOptions: []
     };
 
@@ -9,15 +12,24 @@ export default function DetailedProduct({ $target, currentProduct, addCart, addP
             ...this.state,
             ...nextState
         }
-        
-        if (nextState && nextState.productId) {
-            const product = await this.getProductData(nextState.productId);
-            this.state.currentProduct = product;
-        }
 
         this.render();
         this.eventListener();
     }
+
+    const getProductData = async () => {
+        try {
+            if (this.state.productId) {
+                const res = await fetch(`http://127.0.0.1:5500/data/product${this.state.productId}.json`);
+                const data = await res.json();
+                this.setState({ currentProduct: data });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    getProductData();
 
     this.eventListener = () => {
         this.$selectedOptionWrapper = document.querySelector(".ProductDetail__selectedOptions ul");
@@ -34,16 +46,6 @@ export default function DetailedProduct({ $target, currentProduct, addCart, addP
             this.addCart();
         })
     }
- 
-    this.getProductData = async (productId) => {
-        try {
-            const res = await fetch(`data/product${productId}.json`);
-            const data = await res.json();
-            return data;
-        } catch (e) {
-            console.error(e);
-        }
-    }
 
     this.addSelectedOption = (selectedOption) => {
         //기존 배열에 새로운 배열값 추가. 이미 있을 경우 리턴
@@ -57,10 +59,13 @@ export default function DetailedProduct({ $target, currentProduct, addCart, addP
             });
 
             if (addItem) {
-                this.setState({ selectedOptions: [...this.state.selectedOptions, { ...addItem, totalPrice: addItem.price + this.state.currentProduct.price}] });
+                this.setState({
+                    selectedOptions: [...this.state.selectedOptions,
+                    { ...addItem, totalPrice: addItem.price + this.state.currentProduct.price }]
+                });
 
                 //products 리스트에도 옵션들을 보내줘야함
-                addProductOption(this.state.currentProduct);
+                // addProductOption(this.state.currentProduct);
             }
 
         }
@@ -96,12 +101,12 @@ export default function DetailedProduct({ $target, currentProduct, addCart, addP
             matchedOption.totalPrice = (matchedOption.count * this.state.currentProduct.price);
         }
 
-        this.setState({ selectedOptions: [...this.state.selectedOptions]})
+        this.setState({ selectedOptions: [...this.state.selectedOptions] });
     }
 
     this.addCart = () => {
         //TODO: localStorage에 아래 형태의 데이터로 상품들을 추가하고, /cart 페이지로 이동합니다.
-        
+
         let cartItems = [];
         let existingCart = localStorage.getItem('products_cart');
         const currentProduct = this.state.selectedOptions.map((op) => {
@@ -118,13 +123,18 @@ export default function DetailedProduct({ $target, currentProduct, addCart, addP
         } else {
             cartItems = [...currentProduct];
         }
-
+        
+        // this.setState({ currentProduct: null, selectedOptions: [] })
+        
         localStorage.setItem('products_cart', JSON.stringify(cartItems));
-        addCart(cartItems);
+        routeChange(`/cart`);
     }
 
     this.render = () => {
         const { currentProduct, selectedOptions } = this.state;
+
+        console.log(currentProduct);
+        console.log(selectedOptions);
 
         $target.innerHTML = `
             <div class="ProductDetailPage">

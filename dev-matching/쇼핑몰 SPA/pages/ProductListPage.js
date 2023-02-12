@@ -1,23 +1,35 @@
-export default function Products({ $target, initialState, fetchData, onClickEvent }) {
-    this.state = initialState;
-    fetchData();
-    
+import { routeChange } from "../route.js";
+
+export default function ProductListPage({ $target }) {
     this.setState = (nextState) => {
         this.state = nextState;
         this.render();
         this.eventListener();
     }
+
+    const fetchData = async () => {
+        const res = await fetch('http://127.0.0.1:5500/data/data.json');
+        const data = await res.json();
+        this.setState(data);
+    }
+    
+    //page 생성 시 productList API 요청 처리
+    fetchData();
     
     this.eventListener = () => {
         this.$productWrapper = document.querySelector('.ProductListPage ul');
         this.$productWrapper.addEventListener('click', (ev) => {
             const product = ev.target.closest('.Product');
-            const id = product.getAttribute('productId');
-            onClickEvent(id);
+            const productId = product.getAttribute('productId');
+            if (productId) {
+                routeChange(`/products/${productId}`);
+            }
         });
     }
 
     this.render = () => {
+        if (!this.state) return;
+
         $target.innerHTML = `
             <div class="ProductListPage">
                 <h1>상품목록</h1>
@@ -35,6 +47,4 @@ export default function Products({ $target, initialState, fetchData, onClickEven
             </div>
         `;
     }
-    
-    this.render();
 }

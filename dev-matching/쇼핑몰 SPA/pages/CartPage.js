@@ -1,6 +1,9 @@
-export default function Basket({ $target, carts, order }) {
-    this.state = carts;
-    this.processedCarts = null;
+import { routeChange } from "../route.js";
+
+export default function CartPage({ $target }) {
+    this.state = {
+        carts: []
+    };
 
     this.setState = (nextState) => {
         this.state = {
@@ -8,34 +11,42 @@ export default function Basket({ $target, carts, order }) {
             ...nextState
         }
 
-        if (nextState.products) return;
-
-        this.processedCarts();
         this.render();
         this.eventListener();
     }
 
-    this.processedCarts = () => {
-        const data = this.state.carts.map((cart) => {
-            const product = this.state.products.find((product) => {
-                return cart.productId == product.id;
-            });
+    this.processingCarts = async () => {
+        let existingCart = localStorage.getItem('products_cart') || [];
+        if (existingCart) existingCart = JSON.parse(existingCart);
 
-            const option = product.selectedOptions.find((option) => {
-                return cart.optionId == option.id
-            });
-            
-            return {
-                name: product.name,
-                optionName: option.name,
-                quantity: cart.quantity,
-                price: (option.price + product.price) * cart.quantity,
-                imageUrl: product.imageUrl
+        const products = await Promise.all(existingCart.map(async (cart) => {
+            let product = [];
+
+            try {
+                const res = await fetch(`http://127.0.0.1:5500/data/product${cart.productId}.json`);
+                product = await res.json();
+
+                const selectedOption = product.productOptions.find((option) => {
+                    return cart.optionId == option.id
+                });
+    
+               return {
+                    name: product.name,
+                    optionName: selectedOption.name,
+                    quantity: cart.quantity,
+                    price: (selectedOption.price + product.price) * cart.quantity,
+                    imageUrl: product.imageUrl
+                }
+            } catch (e) {
+                console.log(e);
             }
-        })
+        }));
 
-        this.processedCarts = data;
+        this.setState({ carts: products });
     }
+
+    //page 생성 시 localStorage data 확인 후 
+    this.processingCarts();
 
     this.eventListener = () => {
         const orderBtn = document.querySelector(".OrderButton");
@@ -46,20 +57,18 @@ export default function Basket({ $target, carts, order }) {
 
     this.order = () => {
         alert("주문되었습니다.");
-        localStorage.setItem('products_cart', '');
-        order();
+        localStorage.removeItem('products_cart');
+        this.setState({ carts: [] });
+        routeChange('/');
     }
 
     this.render = () => {
-        console.log('baskettttt')
-        console.log(this.state);
-
         $target.innerHTML = `
             <div class="CartPage">
                 <h1>장바구니</h1>
                 <div class="Cart">
                 <ul>
-                    ${this.processedCarts.map((cart) => (
+                    ${this.state.carts.map((cart) => (
                         `
                         <li class="Cart__item">
                             <img src="${cart.imageUrl}">
@@ -73,7 +82,7 @@ export default function Basket({ $target, carts, order }) {
                 </ul>
                 <div class="Cart__totalPrice">
                     총 상품가격 
-                    ${this.processedCarts.reduce((acc, current) => {
+                    ${this.state.carts.reduce((acc, current) => {
                         return acc += current.price
                     }, 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     원
