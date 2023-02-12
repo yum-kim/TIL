@@ -1,100 +1,32 @@
-import Products from "./components/Products.js";
-import DetailedProduct from "./components/DetailedProduct.js";
-import Basket from "./components/Basket.js";
+import ProductListPage from "./pages/ProductListPage.js";
+import ProductDetailPage from "./pages/productDetailPage.js";
+import CartPage from "./pages/CartPage.js";
+import { init, routeChange } from "./route.js";
 
-export default function App ( $target ) {
-    const initialState = {
-        products: [],
-        detailedProduct: null,
-        basket: { carts: [], products: [] }
+export default function App($target) {
+    // route 기능 추가
+    this.route = () => {
+        const { pathname } = location;
+
+        if (pathname === '/') {
+            new ProductListPage({
+                $target
+            }).render();
+        } else if (pathname.indexOf('/products/') === 0) {
+            const productId = (pathname.split('/'))[2];
+            new ProductDetailPage({
+                $target,
+                productId: productId,
+            }).render();
+        } else if (pathname === '/cart') {
+            new CartPage({
+                $target,
+                // carts: this.state.basket,
+            }).render();
+        }
     }
 
-    this.state = initialState;
-
-    this.setState = (nextState) => {
-        this.state = {
-            ...this.state,
-            ...nextState
-        }
-        
-        if (nextState.products) {
-            products.setState(this.state.products);
-        }
-
-        if (nextState.detailedProduct) {
-            detailedProduct.setState(this.state.detailedProduct);
-        }
-
-        if (nextState.basket) {
-            basket.setState(this.state.basket);
-        }
-        
-        console.log(this.state)
-   }
-
-    const products = new Products({
-        $target,
-        initialState: this.state.products,
-        fetchData: async () => {
-            try {
-                const res = await fetch('data/data.json');
-                const data = await res.json();
-                this.setState({ products: data });
-                products.setState(this.state.products);
-                basket.setState({ ...this.state.basket, products: this.state.products })
-            } catch (e) {
-                console.log(e);
-            }
-        },
-        onClickEvent: (id) => {
-            this.setState({ detailedProduct: { productId: id } });
-        }
-    })
-
-    const detailedProduct = new DetailedProduct({
-        $target,
-        currentProduct: this.state.detailedProduct,
-        addCart: (cartItems) => {
-            this.setState({
-                basket: {
-                    ...this.state.basket.products, carts: [...this.state.basket.carts, ...cartItems]
-                }
-            });
-        },
-        addProductOption: (currentProduct) => {
-            let target = this.state.basket.products;
-            if (target.length == 0) {
-                target = this.state.products;
-            }
-
-            const addedOptionsProducts = target.map(el => {
-                if (el.id == currentProduct.id) {
-                    return {
-                        ...el,
-                        selectedOptions: currentProduct.productOptions
-                    }
-                } else {
-                    return el;
-                }
-            });
-
-            basket.setState({ ...this.state.basket, products: addedOptionsProducts });
-            console.log(this.state.basket.products);
-        }
-    })
-
-    const basket = new Basket({
-        $target,
-        carts: this.state.basket,
-        order: () => {
-            this.setState({
-                ...this.state, detailedProduct: null, basket: { carts: [], products: [] }
-            })
-            products.setState(this.state.products);
-        }
-    })
-
-    
-
-
+    init(this.route);
+    this.route();
+    window.addEventListener('popstate', this.route);
 }
